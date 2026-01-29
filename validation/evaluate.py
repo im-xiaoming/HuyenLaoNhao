@@ -58,14 +58,14 @@ def evaluate1(model, val_loader, device):
     return np.mean(val_acc)
 
 
-def evaluate2(model, data_name, batch_size=256, device='gpu', **args):
+def evaluate2(root, model, model_name, data_name, batch_size=256, device='gpu'):
     path = os.path.join('features_temp')
     os.makedirs(path, exist_ok=True)
     
-    feats, save_path = get_features(args['root'], model, args['model_name'],
+    feats, save_path = get_features(root, model, model_name,
                                     data_name, batch_size, device)
 
-    evaluate(args['root'], data_name, feats, save_path)
+    evaluate(root, data_name, feats, save_path)
 
     df = pd.read_csv(f'{save_path}/verification_result.csv')
     r = df[['1e-06', '1e-05']].to_dict()
