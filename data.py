@@ -6,6 +6,7 @@ import os
 import json
 from PIL import Image
 import numpy as np
+from HuyenLaoNhao.augmenter import Augmenter
 
 class CustomImageFolderDataset(datasets.ImageFolder):
 
