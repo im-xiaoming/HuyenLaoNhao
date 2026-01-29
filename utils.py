@@ -59,7 +59,7 @@ class EarlyStopping:
             'fpr_1e-5': kwargs.get('fpr_1e-5', None)
         }
         if kwargs.get('root') and kwargs.get('root') != '':
-            os.mkdir(kwargs.get('root'), exist_ok=True)
+            os.makedirs(kwargs.get('root'), exist_ok=True)
         file = os.path.join(kwargs.get('root') if kwargs.get('root') else self.path,
                             f'checkpoint_{epoch}.pth')
         torch.save(checkpoint, file)
