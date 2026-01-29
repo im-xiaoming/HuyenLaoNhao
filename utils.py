@@ -106,3 +106,15 @@ def load_weights(path, model, device='gpu'):
     model.load_state_dict(statedict['model_state_dict'])
     print(f"Successfully load model weights from {path}.\n")
     return model
+
+
+def split_parameters(module):
+    params_decay = []
+    params_no_decay = []
+    for m in module.modules():
+        if isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
+            params_no_decay.extend([*m.parameters()])
+        elif len(list(m.children())) == 0:
+            params_decay.extend([*m.parameters()])
+    assert len(list(module.parameters())) == len(params_decay) + len(params_no_decay)
+    return params_decay, params_no_decay
