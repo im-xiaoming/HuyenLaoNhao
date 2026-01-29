@@ -45,6 +45,7 @@ class EarlyStopping:
 
 
     def save(self, **kwargs):
+        epoch = kwargs.get('epoch', 0)
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
