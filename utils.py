@@ -42,12 +42,23 @@ class EarlyStopping:
 
     def copy(self, filename):        
         shutil.copy(filename, self.backup)
+        
+    
+    def _save(self):
+        filename = os.path.join(self.backup, 'temp_checkpoint.pth')
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'head_state_dict': self.head.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'acc': self.best_acc,
+            'patience_count': self.count,
+        }, filename)
+        print(f'Save temporary checkpoint to {filename}\n')
 
 
     def save(self, **kwargs):
-        epoch = kwargs.get('epoch', 0)
         checkpoint = {
-            'epoch': epoch,
+            'epoch': kwargs.get('epoch', None),
             'model_state_dict': self.model.state_dict(),
             'head_state_dict': self.head.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
@@ -58,8 +69,6 @@ class EarlyStopping:
             'fpr_1e-4': kwargs.get('fpr_1e-4', None),
             'fpr_1e-5': kwargs.get('fpr_1e-5', None)
         }
-        if kwargs.get('root') and kwargs.get('root') != '':
-            os.makedirs(kwargs.get('root'), exist_ok=True)
         file = os.path.join(kwargs.get('root') if kwargs.get('root') else self.path,
                             f'checkpoint_{epoch}.pth')
         torch.save(checkpoint, file)
