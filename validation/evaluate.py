@@ -1,6 +1,8 @@
 import pandas as pd
-from HuyenLaoNhao.utils.feature_extraction import get_features, fuse_features_with_norm
-from HuyenLaoNhao.validation import evaluate_utils
+import numpy as np
+import os
+from HuyenLaoNhao.validation.evaluate import evaluate_utils
+from HuyenLaoNhao.validation_mixed.validate_IJB_BC import fuse_features_with_norm, get_features, evaluate
 
 def evaluate1(model, val_loader, device):
     model.eval()
@@ -54,18 +56,12 @@ def evaluate1(model, val_loader, device):
     return np.mean(val_acc)
 
 
-def evaluate2(model, data_name, batch_size=256, device='gpu', load_feats=False, **args):
+def evaluate2(model, data_name, batch_size=256, device='gpu', **args):
     path = os.path.join('features_temp')
-    if not os.path.exists(path):
-        os.makedirs(path)
-    if not load_feats:
-        feats, save_path = get_features(args['root'], model, args['model_name'], data_name, batch_size, device)
-        np.save(os.path.join(path, data_name, 'feats.npy'), feats)
-    else:
-        feats = np.load(os.path.join(path, data_name, 'feats.npy'))
-        save_path = './result/{}/{}'.format(data_name, args['model_name'])
-        print('result save_path', save_path)
-        os.makedirs(save_path, exist_ok=True)
+    os.makedirs(path, exist_ok=True)
+    
+    feats, save_path = get_features(args['root'], model, args['model_name'],
+                                    data_name, batch_size, device)
 
     evaluate(args['root'], data_name, feats, save_path)
 
