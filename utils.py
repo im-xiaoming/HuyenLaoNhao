@@ -57,8 +57,9 @@ class EarlyStopping:
 
 
     def save(self, **kwargs):
+        epoch = kwargs.get('epoch', None)
         checkpoint = {
-            'epoch': kwargs.get('epoch', None),
+            'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'head_state_dict': self.head.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
@@ -69,7 +70,7 @@ class EarlyStopping:
             'fpr_1e-4': kwargs.get('fpr_1e-4', None),
             'fpr_1e-5': kwargs.get('fpr_1e-5', None)
         }
-        file = os.path.join(kwargs.get('root') if kwargs.get('root') else self.path,
+        file = os.path.join(self.path,
                             f'checkpoint_{epoch}.pth')
         torch.save(checkpoint, file)
         print(f'Save checkpoint at epoch {epoch}\n')
