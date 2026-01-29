@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from utils import l2_norm
+from HuyenLaoNhao.utils import l2_norm
 
 class AdaFace(nn.Module):
     def __init__(self,
