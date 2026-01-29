@@ -1,6 +1,6 @@
 import pandas as pd
-from ../utils.feature_extraction import get_features, fuse_features_with_norm
-from HuyenLaoNhaoevaluation.evaluate import evaluate_utils
+from HuyenLaoNhao.utils.feature_extraction import get_features, fuse_features_with_norm
+from HuyenLaoNhao,.validation import evaluate_utils
 
 def evaluate1(model, val_loader, device):
     model.eval()
