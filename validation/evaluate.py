@@ -68,6 +68,6 @@ def evaluate2(root, model, model_name, data_name, batch_size=256, device='gpu'):
     evaluate(root, data_name, feats, save_path)
 
     df = pd.read_csv(f'{save_path}/verification_result.csv')
-    r = df[['1e-06', '1e-05']].to_dict()
+    r = df[['1e-06', '1e-05', '0.0001']].to_dict()
     r = {key: val[0] for key, val in r.items()}
     return r
