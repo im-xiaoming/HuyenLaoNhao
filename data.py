@@ -97,8 +97,7 @@ class FiveValidationDataset(Dataset):
 
 def val_dataset(data_root='data', val_data_path=None, concat_mem_file_name='mm.dat'):
     val_data = get_val_data(data_root)
-    agedb_30, agedb_30_issame, cfp_fp, cfp_fp_issame, lfw, lfw_issame,
-    cfp_ff, cfp_ff_issame = val_data
+    agedb_30, agedb_30_issame, cfp_fp, cfp_fp_issame, lfw, lfw_issame, cfp_ff, cfp_ff_issame = val_data
     val_data_dict = {
         'agedb_30': (agedb_30, agedb_30_issame),
         "cfp_fp": (cfp_fp, cfp_fp_issame),
