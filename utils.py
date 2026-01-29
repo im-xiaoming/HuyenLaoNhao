@@ -23,11 +23,13 @@ def fuse_features_with_norm(stacked_embeddings, stacked_norms):
 
 
 class EarlyStopping:
-    def __init__(self, root, backup, model, head, optimizer, patience=3, eps=1e-6):
+    def __init__(self, root, backup, drive, model, head, optimizer, patience=3, eps=1e-6):
         self.path = os.path.join(root, 'checkpoints')
         self.backup = backup
+        self.drive = drive
         
         os.makedirs(self.path, exist_ok=True)
+        os.makedirs(self.drive, exist_ok=True)
         os.makedirs(self.backup, exist_ok=True)
 
         self.model = model
@@ -41,7 +43,7 @@ class EarlyStopping:
 
 
     def copy(self, filename):        
-        shutil.copy(filename, self.backup)
+        shutil.copy(filename, self.drive)
         
     
     def _save(self):
