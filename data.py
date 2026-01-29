@@ -115,8 +115,7 @@ def get_val_data(data_path):
     cfp_fp, cfp_fp_issame = get_val_pair(data_path, 'cfp_fp')
     lfw, lfw_issame = get_val_pair(data_path, 'lfw')
     cfp_ff, cfp_ff_issame = get_val_pair(data_path, 'cfp_ff')
-    return agedb_30, agedb_30_issame, cfp_fp, cfp_fp_issame,
-                lfw, lfw_issame, cfp_ff, cfp_ff_issame
+    return agedb_30, agedb_30_issame, cfp_fp, cfp_fp_issame, lfw, lfw_issame, cfp_ff, cfp_ff_issame
 
 def get_val_pair(path, name):
     mem_file_name = os.path.join(path, name + '.dat')
