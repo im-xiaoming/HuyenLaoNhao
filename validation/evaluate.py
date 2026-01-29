@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from HuyenLaoNhao.validation.evaluate import evaluate_utils
+from HuyenLaoNhao.validation import evaluate_utils
 from HuyenLaoNhao.validation_mixed.validate_IJB_BC import fuse_features_with_norm, get_features, evaluate
 
 def evaluate1(model, val_loader, device):
