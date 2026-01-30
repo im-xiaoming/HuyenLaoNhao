@@ -50,7 +50,6 @@ class EarlyStopping:
     def _save(self):
         filename = os.path.join(self.backup, 'temp_checkpoint.pth')
         checkpoint = {
-            'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'head_state_dict': self.head.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
