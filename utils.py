@@ -23,7 +23,7 @@ def fuse_features_with_norm(stacked_embeddings, stacked_norms):
 
 
 class EarlyStopping:
-    def __init__(self, root, backup, drive, model, head, optimizer, patience=3, eps=1e-6):
+    def __init__(self, root, backup, drive, model, head, optimizer, scheduler, patience=3, eps=1e-6):
         self.path = os.path.join(root, 'checkpoints')
         self.backup = backup
         self.drive = drive
@@ -35,6 +35,7 @@ class EarlyStopping:
         self.model = model
         self.head = head
         self.optimizer = optimizer
+        self.scheduler = scheduler
         self.eps = eps
         self.best_acc = float('-inf')
         self.count = 0
@@ -48,29 +49,31 @@ class EarlyStopping:
     
     def _save(self):
         filename = os.path.join(self.backup, 'temp_checkpoint.pth')
-        torch.save({
-            'model_state_dict': self.model.state_dict(),
-            'head_state_dict': self.head.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'acc': self.best_acc,
-            'patience_count': self.count,
-        }, filename)
-        print(f'Save temporary checkpoint to {filename}\n')
-
-
-    def save(self, **kwargs):
-        epoch = kwargs.get('epoch', None)
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'head_state_dict': self.head.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
-            'acc': self.best_acc,
-            'patience_count': self.count,
-            
-            'loss': kwargs.get('loss', None),
-            'fpr_1e-4': kwargs.get('fpr_1e-4', None),
-            'fpr_1e-5': kwargs.get('fpr_1e-5', None)
+        }
+        torch.save(checkpoint, filename)
+        print(f'Save temporary checkpoint to {filename}\n')
+
+
+    def save(self, **kwargs):
+        epoch = kwargs.get('epoch', None)
+
+        checkpoint = {
+            'epoch': epoch,
+            'model_state_dict': self.model.state_dict(),
+            'head_state_dict': self.head.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'scheduler_state_dict': self.scheduler.state_dict(),
+            'early_stopping_state_dict': {
+                'acc': self.best_acc,
+                'patience_count': self.count,
+            },
+            'far_1e-4': kwargs.get('fpr_1e-4'),
+            'far_1e-5': kwargs.get('fpr_1e-4'),
         }
         file = os.path.join(self.path,
                             f'checkpoint_{epoch}.pth')
@@ -101,12 +104,16 @@ def load_checkpoint(path, model, head=None, optimizer=None,
 
     head.load_state_dict(statedict['head_state_dict'])
     optimizer.load_state_dict(statedict['optimizer_state_dict'])
+    scheduler.load_statedict(statedict['scheduler_state_dict'])
 
-    epoch = statedict.get('epoch')
-    acc = statedict.get('acc')
-    count = statedict.get('count')
+    
+    early_stopping_state_dict = statedict['early_stopping_state_dict']
+    epoch = early_stopping_state_dict.get('epoch')
+    acc = early_stopping_state_dict.get('acc')
+    count = early_stopping_state_dict.get('patience_count')
+    # loss = early_stopping_state_dict.get('loss')
 
-    scheduler.last_epoch = epoch - 1
+    early_stopping.best_acc = acc
 
     early_stopping.best_acc = acc
     early_stopping.count = count
