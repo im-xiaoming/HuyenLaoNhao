@@ -105,7 +105,7 @@ def load_checkpoint(path, model, head=None, optimizer=None,
     epoch = statedict.get('epoch')
     head.load_state_dict(statedict['head_state_dict'])
     optimizer.load_state_dict(statedict['optimizer_state_dict'])
-    scheduler.load_statedict(statedict['scheduler_state_dict'])
+    scheduler.load_state_dict(statedict['scheduler_state_dict'])
     
     early_stopping_state_dict = statedict['early_stopping_state_dict']
     acc = early_stopping_state_dict.get('acc')
