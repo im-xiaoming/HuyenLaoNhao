@@ -58,10 +58,7 @@ def evaluate1(model, val_loader, device):
     return np.mean(val_acc)
 
 
-def evaluate2(root, model, model_name, data_name, batch_size=256, device='gpu'):
-    path = os.path.join('features_temp')
-    os.makedirs(path, exist_ok=True)
-    
+def evaluate2(root, model, model_name, data_name, batch_size=256, device='gpu'):    
     feats, save_path = get_features(root, model, model_name,
                                     data_name, batch_size, device)
 
