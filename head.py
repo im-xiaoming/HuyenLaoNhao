@@ -84,11 +84,11 @@ class SubAdaFace(nn.Module):
         super(SubAdaFace, self).__init__()
         self.classnum = classnum
         self.K = K
-        self.kernel = nn.Parameter(torch.Tensor(embedding_size, classnum, K))
-        self.kernel = self.kernel.view(embedding_size, K*classnum)
+        kernel = torch.Tensor(embedding_size, classnum * K)
+        nn.init.xavier_uniform_(kernel)
+        self.kernel = nn.Parameter(kernel)
 
         # initial kernel
-        nn.init.xavier_uniform_(self.kernel)
         self.m = m
         self.eps = 1e-3
         self.h = h
