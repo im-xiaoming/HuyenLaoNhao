@@ -118,11 +118,10 @@ class SubAdaFace(nn.Module):
         sine = torch.sqrt(1 - cosine**2)
 
         safe_norms = torch.clip(norms, min=0.001, max=100)
-        safe_norms = safe_norms.clone().detach()
 
         with torch.no_grad():
-            mean = safe_norms.mean().detach()
-            std = safe_norms.std().detach()
+            mean = safe_norms.mean()
+            std = safe_norms.std()
             self.batch_mean = mean * self.t_alpha + (1 - self.t_alpha) * self.batch_mean
             self.batch_std =  std * self.t_alpha + (1 - self.t_alpha) * self.batch_std
 
