@@ -81,7 +81,7 @@ class SubAdaFace(nn.Module):
                  s=64.,
                  t_alpha=0.99,
                  ):
-        super(AdaFace, self).__init__()
+        super(SubAdaFace, self).__init__()
         self.classnum = classnum
         self.K = K
         self.kernel = nn.Parameter(torch.Tensor(embedding_size, classnum, K))
