@@ -108,62 +108,39 @@ class SubAdaFace(nn.Module):
         print('self.s', self.s)
         print('self.t_alpha', self.t_alpha)
 
-    def forward(self, embeddings, norms, label):
+    def forward(self, embbedings, norms, label):
 
-        N = embeddings.size(0)
-
-        # normalize kernel
         kernel_norm, _ = l2_norm(self.kernel, axis=0)
+        cosine = torch.mm(embbedings, kernel_norm)
+        cosine = cosine.clamp(-1 + self.eps, 1 - self.eps)
+        
+        cosine = cosine.view(-1, self.classnum, self.K)
+        cosine, _ = cosine.max(dim=2) # (N, C)
+        
+        
+        sine = torch.sqrt(1 - cosine**2)
 
-        cosine_all = torch.mm(embeddings, kernel_norm)  # (N, C*K)
-        cosine_all = cosine_all.clamp(-1 + self.eps, 1 - self.eps)
-
-        # reshape -> (N, C, K)
-        cosine_all = cosine_all.view(N, self.classnum, self.K)
-
-        # ====== AdaFace margin scaler ======
         safe_norms = torch.clip(norms, min=0.001, max=100)
+        safe_norms = safe_norms.clone().detach()
 
         with torch.no_grad():
             mean = safe_norms.mean()
             std = safe_norms.std()
             self.batch_mean = mean * self.t_alpha + (1 - self.t_alpha) * self.batch_mean
-            self.batch_std = std * self.t_alpha + (1 - self.t_alpha) * self.batch_std
+            self.batch_std =  std * self.t_alpha + (1 - self.t_alpha) * self.batch_std
 
         margin_scaler = (safe_norms - self.batch_mean) / (self.batch_std + self.eps)
         margin_scaler = margin_scaler * self.h
         margin_scaler = torch.clip(margin_scaler, -1, 1)
 
+        one_hot = torch.zeros_like(cosine, device=cosine.device) # N x C
+        one_hot.scatter_(1, label.reshape(-1, 1), 1.0)
+        
         g_angular = -1 * self.m * margin_scaler
         g_add = self.m * margin_scaler + self.m
-
-        # ====================================
-
-        # ====== HANDLE POSITIVE CLASS ======
-        # cosine of ground-truth class -> (N, K)
-        cosine_y = cosine_all[torch.arange(N), label]
-
-        # chọn sub-center tốt nhất
-        cosine_y_max, max_idx = cosine_y.max(dim=1)
-
-        sine_y = torch.sqrt(1 - cosine_y_max ** 2)
-
-        # áp angular margin
-        phi_y = cosine_y_max * torch.cos(g_angular) - sine_y * torch.sin(g_angular)
-        phi_y = torch.where(cosine_y_max > self.th,
-                            phi_y,
-                            cosine_y_max - self.mm)
-
-        # subtract additive margin
-        phi_y = phi_y - g_add
-
-        # ====================================
-
-        # ====== HANDLE NEGATIVE CLASSES ======
-        # reduce all classes with max over K
-        cosine_max, _ = cosine_all.max(dim=2)  # (N, C)
-
-        # replace positive class logits
-        cosine_max[torch.arange(N), label] = phi_y
-
-        return cosine_max * self.s
+        
+        phi = cosine * torch.cos(g_angular) - sine * torch.sin(g_angular) # phi = cos(theta + ....)
+        phi = torch.where(cosine > self.th, phi, cosine - self.mm)
+        
+        logits = (one_hot * phi) - (one_hot * g_add) + (1 - one_hot) * cosine
+        return logits * self.s
