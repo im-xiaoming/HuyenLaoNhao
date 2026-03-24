@@ -9,8 +9,10 @@ from ..expert import gabor
 from ..utils import kernel_pca
 from skimage.color import rgb2gray
 
-def evaluate1(model, val_loader, device, expert=False):
+def evaluate1(model, val_loader, device, expert=False, counter=-1):
     model.eval()
+    
+    count = 0
 
     all_embeddings = []
     all_features = []
@@ -52,6 +54,10 @@ def evaluate1(model, val_loader, device, expert=False):
             all_labels.append(labels.cpu())
             all_datanames.append(datanames.cpu())
             all_indices.append(indices.cpu())
+            
+            count += 1
+            if count == counter:
+                break
 
         embeddings = torch.cat(all_embeddings) # (N, 512)
         labels = torch.cat(all_labels)
