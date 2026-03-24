@@ -10,6 +10,7 @@ from ..validation_mixed.insightface_ijb_helper import eval_helper_identification
 from ..validation_mixed.insightface_ijb_helper import eval_helper as eval_helper_verification
 
 from ..expert import gabor
+from ..expert.utils import get_expert_features, combined_features
 from ..utils import kernel_pca
 
 import warnings
@@ -17,6 +18,12 @@ warnings.filterwarnings("ignore")
 import torch
 from tqdm import tqdm
 import pandas as pd
+
+
+
+USE_EXPERT = False
+ROOT = None
+FEATS_PATH = None
 
 
 def str2bool(v):
@@ -47,7 +54,9 @@ def fuse_features_with_norm(stacked_embeddings, stacked_norms):
 
     return fused, fused_norm
 
-def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test, device, expert=False):
+
+
+def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test, device):
     img_list = open(landmark_list_path)
     # img_aligner = ImageAligner(image_size=(112, 112))
 
@@ -74,78 +83,75 @@ def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test,
     features = []
     norms = []
     
-    all_features = []
-    if expert:
-        bank = gabor.build_gabor_bank()
-        print(f'Gabor bank built with {len(bank)} filters')
-    
-    with torch.no_grad():
-        for images, idx in tqdm(dataloader):
-            
-            # GABOR FILTERS APPLIED HERE
-            if expert:
-                images_ = images.permute(0, 2, 3, 1)
-                grays = [rgb2gray(img) for img in images_]
-                list_responses = [gabor.apply_gabor_bank(gray, bank) for gray in grays]
-                expert_features = []
-                for response in list_responses:
-                    images_ = []
-                    for entry in response:
-                        images_.append(entry['magnitude'].flatten())
-                    expert_features.append(np.concatenate(images_, axis=0)) # (32, 225792)
-                expert_features = torch.tensor(expert_features, dtype=torch.float32)
-                all_features.append(expert_features.numpy()) # (N, 32, _)
-            
-            
-            # GABOR FILTERS APPLIED HERE
-            feature = model(images.to(device)) # (32, 512)
-            if isinstance(feature, tuple):
-                feature, norm = feature
-            else:
-                norm = None
-
-            if use_flip_test:
-                fliped_images = torch.flip(images, dims=[3])
-                flipped_feature = model(fliped_images.to(device))
-                if isinstance(flipped_feature, tuple):
-                    flipped_feature, flipped_norm = flipped_feature
-                else:
-                    flipped_norm = None
-
-                stacked_embeddings = torch.stack([feature, flipped_feature], dim=0) # (2, B, D)
-                if norm is not None:
-                    stacked_norms = torch.stack([norm, flipped_norm], dim=0)
-                else:
-                    staked_norms = None
-
-                fused_feature, fused_norm = fuse_features_with_norm(stacked_embeddings, stacked_norms)
-                features.append(fused_feature.cpu().numpy())
-                norms.append(fused_norm.cpu().numpy())
-            else:
-                features.append(feature.cpu().numpy()) # (N, 32, 512)
-                norms.append(norm.cpu().numpy())
-    
-    # Apply Kernel PCA
-    if expert:
-        print('Start to apply kernel PCA on Gabor features\n')
-        print(f"Features shape before PCA: ({len(all_features)},{len(all_features[0][0])})")
-        kpca, all_features = kernel_pca(torch.cat(all_features, dim=0).numpy(), n_components=512) # (N, 512)
-        print(f"Features shape after PCA: {all_features.shape}\n")
-        # features: (N, 32, 512) -> List numpy
-        # all_features: (N, 32, 512) -> List numpy
-        combined_features = np.concatenate([features, all_features], axis=2) # (N, 32, 1024)
-        img_feats = np.concatenate(list(combined_features), axis=0).astype(np.float32) # (N, 1024)
+    # GABOR FILTER
+    if USE_EXPERT:
+        if not ROOT:
+            raise Exception("ROOT must be set!")
         
-        print(f"Embeddings shape after concatenating with Gabor features: {embeddings.shape}\n")
-    else:
+        if not os.path.exists(os.path.join(ROOT, 'gabor_embs.pt')):
+            os.makedirs(ROOT, exist_ok=True)
+            print("Use Gabor filters")
+            all_features = get_expert_features(dataloader)
+            torch.save(all_features, os.path.join(ROOT, 'gabor_embs.pt'))
+            print("Done created Gabor features!")
+        else:
+            all_features = torch.load(os.path.join(ROOT, 'gabor_embs.pt'))
+            print("Done loaded Gabor features!")
+    
+    if not os.path.exists(FEATS_PATH):
+        with torch.no_grad():
+            for images, idx in tqdm(dataloader):
+                feature = model(images.to(device))
+                if isinstance(feature, tuple):
+                    feature, norm = feature
+                else:
+                    norm = None
+
+                if use_flip_test:
+                    fliped_images = torch.flip(images, dims=[3])
+                    flipped_feature = model(fliped_images.to(device))
+                    if isinstance(flipped_feature, tuple):
+                        flipped_feature, flipped_norm = flipped_feature
+                    else:
+                        flipped_norm = None
+
+                    stacked_embeddings = torch.stack([feature, flipped_feature], dim=0) # (2, B, D)
+                    if norm is not None:
+                        stacked_norms = torch.stack([norm, flipped_norm], dim=0)
+                    else:
+                        staked_norms = None
+
+                    fused_feature, fused_norm = fuse_features_with_norm(stacked_embeddings, stacked_norms)
+                    features.append(fused_feature.cpu().numpy())
+                    norms.append(fused_norm.cpu().numpy())
+                else:
+                    features.append(feature.cpu().numpy()) # (N, 32, 512)
+                    norms.append(norm.cpu().numpy())
+             
         features = np.concatenate(features, axis=0) # (N, 512)
         img_feats = np.array(features).astype(np.float32)
         
-       
+        torch.save({
+            'features': img_feats,
+            'norms': norms
+        }, FEATS_PATH)       
+            
+    else:
+        data_dict = torch.load(FEATS_PATH)
+        img_feats = data_dict['features']
+        norms = data_dict['norms']
+        
+        print("Load data successfully!")
+    
+    
+    if USE_EXPERT:
+        print('Combined features!')
+        img_feats = combined_features(img_feats, all_features).numpy()
+    
     faceness_scores = np.array(faceness_scores).astype(np.float32)
     norms = np.concatenate(norms, axis=0)
 
-    assert len(features) == len(img_paths)
+    assert len(img_feats) == len(img_paths)
 
     return img_feats, faceness_scores, norms
 
