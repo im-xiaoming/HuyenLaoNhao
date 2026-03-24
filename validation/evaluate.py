@@ -3,7 +3,7 @@ import numpy as np
 import os
 import torch
 from tqdm import tqdm
-from ..validation import evaluate_utils, l2_norm
+from .import evaluate_utils
 from ..validation_mixed.validate_IJB_BC import fuse_features_with_norm, get_features, evaluate
 from ..expert import gabor
 from ..utils import kernel_pca
@@ -25,16 +25,15 @@ def evaluate1(model, val_loader, device, expert=False):
     with torch.no_grad():
         for images, labels, datanames, indices in tqdm(val_loader):
             if expert:
-                print('Extracting Gabor features')
                 images_ = images.permute(0, 2, 3, 1)
                 grays = [rgb2gray(img) for img in images_]
                 list_responses = [gabor.apply_gabor_bank(gray, bank) for gray in grays]
                 features = []
                 for response in list_responses:
-                    images = []
+                    images_ = []
                     for entry in response:
-                        images.append(entry['magnitude'].flatten())
-                    features.append(np.concatenate(images, axis=0)) # (32, 225792)
+                        images_.append(entry['magnitude'].flatten())
+                    features.append(np.concatenate(images_, axis=0)) # (32, 225792)
                 features = torch.tensor(features, dtype=torch.float32)
                 all_features.append(features) # (N, 32, _)
             
