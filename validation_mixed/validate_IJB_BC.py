@@ -22,8 +22,8 @@ import pandas as pd
 
 
 USE_EXPERT = False
-ROOT = None
 FEATS_PATH = None
+EXPERT_FEATS_PATH = None
 
 
 def str2bool(v):
@@ -55,6 +55,10 @@ def fuse_features_with_norm(stacked_embeddings, stacked_norms):
     return fused, fused_norm
 
 
+def create_exert_features(data_loader):
+    all_features = get_expert_features(dataloader)
+    torch.save(all_features, EXPERT_FEATS_PATH)
+
 
 def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test, device):
     img_list = open(landmark_list_path)
@@ -85,19 +89,15 @@ def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test,
     
     # GABOR FILTER
     if USE_EXPERT:
-        if not ROOT:
-            raise Exception("ROOT must be set!")
-        
-        if not os.path.exists(os.path.join(ROOT, 'gabor_embs.pt')):
-            os.makedirs(ROOT, exist_ok=True)
-            print("Use Gabor filters")
-            all_features = get_expert_features(dataloader)
-            torch.save(all_features, os.path.join(ROOT, 'gabor_embs.pt'))
+        if not os.path.exists(os.path.join(EXPERT_FEATS_PATH)):
+            create_exert_features(dataloader)
             print("Done created Gabor features!")
+            return
         else:
-            all_features = torch.load(os.path.join(ROOT, 'gabor_embs.pt'))
+            all_features = torch.load(FEATS_PATH)
             print("Done loaded Gabor features!")
     
+    # INFERENCE
     if not os.path.exists(FEATS_PATH):
         with torch.no_grad():
             for images, idx in tqdm(dataloader):
@@ -129,12 +129,14 @@ def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test,
                     norms.append(norm.cpu().numpy())
              
         features = np.concatenate(features, axis=0) # (N, 512)
+        norms = np.concatenate(norms, axis=0)
         img_feats = np.array(features).astype(np.float32)
         
         torch.save({
             'features': img_feats,
             'norms': norms
-        }, FEATS_PATH)       
+        }, FEATS_PATH)
+        return  
             
     else:
         data_dict = torch.load(FEATS_PATH)
@@ -149,8 +151,7 @@ def infer_images(model, img_root, landmark_list_path, batch_size, use_flip_test,
         img_feats = combined_features(img_feats, all_features).numpy()
     
     faceness_scores = np.array(faceness_scores).astype(np.float32)
-    norms = np.concatenate(norms, axis=0)
-
+    
     assert len(img_feats) == len(img_paths)
 
     return img_feats, faceness_scores, norms
