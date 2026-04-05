@@ -1,25 +1,50 @@
-import cv2
-from retinaface import RetinaFace
+from insightface.app import FaceAnalysis
+from .align import alignment_procedure
+
+app = FaceAnalysis(providers=['CUDAExecutionProvider'])
+app.prepare(ctx_id=0)
 
 def detect_faces(img):
-    detections = RetinaFace.detect_faces(img)
+    faces = app.get(img)
+    result = []
+    for face in faces:
+        bbox = face.bbox
+        landmarks = face.kps
+        result.append({
+            'bbox': bbox.tolist(),
+            'left_eye': landmarks[0].tolist(),
+            'right_eye': landmarks[1].tolist(),
+            'score': face['det_score']
+        })
+    return sorted(result, key=lambda x: x['score'], reverse=True)
 
-    if not isinstance(detections, dict):
-        return []
 
+def extract_face(img, detections):
     results = []
+    for detection in detections:
+        x1, y1, x2, y2 = list(map(lambda x: int(x), detection["bbox"]))
 
-    for key in detections:
-        face = detections[key]
+        detected_face = img[y1:y2, x1:x2]
+        results.append({
+            'cropped_face': detected_face,
+            'left_eye': detection['left_eye'],
+            'right_eye': detection['right_eye']
+        })
+    return results
 
-        if face["score"] > 0.90:
-            results.append(face)
 
-    return sorted(results, key=lambda x: x['score'], reverse=True)
-
-def extract_face(img, detection):
-    x1, y1, x2, y2 = detection["facial_area"]
-
-    detected_face = img[int(y1):int(y2), int(x1):int(x2)]
-
-    return detected_face, detection['landmarks'], (x1, y1, x2 - x1, y2 - y1)
+def detect_crop_align(image, k=1):
+    detections = detect_faces(image)
+    extractions = extract_face(image, detections)
+    
+    aligned_images = []
+    for item in extractions:
+        aligned_img, _ = alignment_procedure(
+            item['cropped_face'],
+            {
+                'left_eye': item['left_eye'],
+                'right_eye': item['right_eye']
+            }
+        )
+        aligned_images.append(aligned_img)
+    return aligned_images[:k]
