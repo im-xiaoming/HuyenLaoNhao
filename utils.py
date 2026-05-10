@@ -148,27 +148,51 @@ def get_model(model_name, device):
 
 
 def load_weight(model, checkpoint):
-    statedict = torch.load(checkpoint, weights_only=True)
-    
-    try:
-        statedict = statedict['state_dict']
-        
+
+    statedict = torch.load(
+        checkpoint,
+        map_location=torch.device('cpu')
+    )
+
+    # Case 1: Lightning checkpoint (.ckpt)
+    if 'state_dict' in statedict:
+
+        ckpt_state_dict = statedict['state_dict']
+
         new_state_dict = {}
 
-        for k, v in statedict.items():
+        for k, v in ckpt_state_dict.items():
+
             if k.startswith("model."):
                 new_key = k[len("model."):]
-                new_state_dict[new_key] = v
+            else:
+                new_key = k
+
+            new_state_dict[new_key] = v
 
         model.load_state_dict(new_state_dict, strict=False)
-        
+
         print("Load with .ckpt!")
-        
-    except:
-        
-        model.load_state_dict(statedict)
+
+    # Case 2: Custom training checkpoint
+    elif 'model_statedict' in statedict:
+
+        model.load_state_dict(
+            statedict['model_statedict'],
+            strict=False
+        )
+
+        print("Load with custom checkpoint!")
+
+    # Case 3: Pure state_dict (.pth)
+    else:
+
+        model.load_state_dict(
+            statedict,
+            strict=False
+        )
+
         print("Load with .pth!")
-        
 
 
 def get_head(device, embedding_size=512, classnum=8631, m=0.4, h=0.333, s=64, t_alpha=0.99):
