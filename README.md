@@ -1,8 +1,8 @@
 # Facial Recognition System
 
-**Nguyễn Ngọc Minh, Trần Thị Huyền, Bùi Như Ý**<br>
+**Lê Trọng Ngọc, Nguyễn Ngọc Minh, Trần Thị Huyền, Bùi Như Ý**<br>
 Khoa Công nghệ Thông tin, Đại học Công nghiệp Thành phố Hồ Chí Minh<br>
-Liên hệ: minhnguyen47431@gmail.com
+Liên hệ: 22685841.minh@student.iuh.edu.vn, 22728001.y@student.iuh.edu.vn, 22657821.huyen@student.iuh.edu.vn, ngoc.le@fulbrightmail.org
 
 Dự án xây dựng hệ thống nhận diện khuôn mặt dựa trên học sâu, kết hợp RetinaFace cho phát hiện/căn chỉnh khuôn mặt, backbone CNN hoặc Vision Transformer để trích xuất đặc trưng, và AdaFace để học embedding thích nghi theo chất lượng ảnh. Mô hình được huấn luyện trên VGGFace2 và đánh giá trên các bộ dữ liệu LFW, AGEDB-30, CFP-FP, CFP-FF, IJB-B và IJB-C.
 
